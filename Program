@@ -1,0 +1,118 @@
+/*
+    Mastermind – Console version
+    Built for the Steer Elite 2025 Gameplay Programming assessment.
+
+    Key points
+    • Works on Windows console
+    • Supports -c and -t command flags
+    • Handles End-Of-File (Ctrl+Z then Enter on Windows) as a normal quit
+    • Uses clean OOP style in a single file for quick review
+*/
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace Mastermind
+{
+    class Program
+    {
+        // ----- constant values -----
+        private const int CodeLength = 4;              // Four pieces in a code
+        private const string Pieces = "012345678";     // Valid symbols
+        // ---------------------------
+
+        static void Main(string[] args)
+        {
+            int maxAttempts = 10;          // default tries
+            string secretCode = null;      // will hold chosen code
+
+            // ---- read command flags ----
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] == "-c") secretCode = args[i + 1];
+                if (args[i] == "-t" && int.TryParse(args[i + 1], out int t) && t > 0)
+                    maxAttempts = t;
+            }
+            // ----------------------------
+
+            // If no valid code was passed create one
+            if (!IsValidCode(secretCode))
+                secretCode = GenerateCode();
+
+            Console.WriteLine("Can you break the code? Enter a valid guess.");
+
+            for (int round = 0; round < maxAttempts; round++)
+            {
+                Console.WriteLine("---");
+                Console.WriteLine($"Round {round}");
+                Console.Write(">");
+
+                string guess = Console.ReadLine();      // may return null on EOF
+                if (guess == null)
+                {
+                    Console.WriteLine("Good bye.");
+                    return;
+                }
+
+                if (!IsValidCode(guess))
+                {
+                    Console.WriteLine("Wrong input!");
+                    round--;        // do not count wrong entry
+                    continue;
+                }
+
+                int wellPlaced = CountWellPlaced(secretCode, guess);
+                int misplaced = CountMisplaced(secretCode, guess) - wellPlaced;
+
+                if (wellPlaced == CodeLength)
+                {
+                    Console.WriteLine("Congratz! You did it!");
+                    return;
+                }
+
+                Console.WriteLine($"Well placed pieces: {wellPlaced}");
+                Console.WriteLine($"Misplaced pieces: {misplaced}");
+            }
+
+            Console.WriteLine($"You have lost. The code was {secretCode}.");
+        }
+
+        // ---- helper methods ----
+        private static bool IsValidCode(string code)
+        {
+            if (code == null || code.Length != CodeLength) return false;
+            if (!code.All(c => Pieces.Contains(c))) return false;
+            return code.Distinct().Count() == CodeLength;
+        }
+
+        private static string GenerateCode()
+        {
+            Random rng = new Random();
+            List<char> pool = Pieces.ToList();
+            char[] pick = new char[CodeLength];
+
+            for (int i = 0; i < CodeLength; i++)
+            {
+                int index = rng.Next(pool.Count);
+                pick[i] = pool[index];
+                pool.RemoveAt(index);
+            }
+            return new string(pick);
+        }
+
+        private static int CountWellPlaced(string secret, string guess)
+        {
+            int count = 0;
+            for (int i = 0; i < CodeLength; i++)
+                if (secret[i] == guess[i]) count++;
+            return count;
+        }
+
+        private static int CountMisplaced(string secret, string guess)
+        {
+            return secret.Intersect(guess).Count();
+        }
+        // -------------------------
+    }
+}
